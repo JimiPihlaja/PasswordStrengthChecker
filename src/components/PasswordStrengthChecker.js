@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import "../ui/PasswordStrengthChecker.css";
 
 export default function PasswordStrengthChecker() {
   const [password, setPassword] = useState("");
@@ -8,7 +9,7 @@ export default function PasswordStrengthChecker() {
 
   const handleChange = (e) => {
     setPassword(e.target.value);
-    setHasChecked(false); // Reset each time user changes input
+    setHasChecked(false);
   };
 
   const handleKeyPress = (e) => {
@@ -33,13 +34,11 @@ export default function PasswordStrengthChecker() {
     if (/[0-9]/.test(pwd)) pool += 10;
     if (/[^A-Za-z0-9]/.test(pwd)) pool += 32;
 
-    // Estimate entropy → convert to 0–100 scale
     const entropy = pwd.length * Math.log2(pool || 1);
-    const score = Math.min(Math.round((entropy / 100) * 100), 100);
-    return score;
+    return Math.min(Math.round((entropy / 100) * 100), 100);
   }
 
-  function generateFeedback(pwd, score) {
+  function generateFeedback(pwd) {
     if (!pwd) return "";
     const suggestions = [];
     if (pwd.length < 8) suggestions.push("Make it longer (12+ characters is better).");
@@ -47,92 +46,65 @@ export default function PasswordStrengthChecker() {
     if (!/[0-9]/.test(pwd)) suggestions.push("Include a number.");
     if (!/[^A-Za-z0-9]/.test(pwd)) suggestions.push("Add a special symbol like ! or @.");
     if (/password|1234|qwerty/i.test(pwd)) suggestions.push("Avoid common words or patterns.");
-
-    if (suggestions.length === 0) {
-      return "✅ Your password looks strong and secure!";
-    }
-    return suggestions.slice(0, 2).join(" ");
+    return suggestions.length === 0
+      ? "Your password looks strong and secure!"
+      : suggestions.slice(0, 2).join(" ");
   }
 
   function getLabel(score) {
-    if (score < 30) return { text: "Weak", color: "red" };
-    if (score < 60) return { text: "Medium", color: "orange" };
-    if (score < 85) return { text: "Strong", color: "green" };
-    return { text: "Very Strong", color: "darkgreen" };
+    if (score < 30) return { text: "Weak", color: "#e74c3c" };
+    if (score < 60) return { text: "Medium", color: "#f39c12" };
+    if (score < 85) return { text: "Strong", color: "#27ae60" };
+    return { text: "Very Strong", color: "#2ecc71" };
   }
 
   const label = getLabel(score);
 
   return (
-    <div style={{ maxWidth: 400, margin: "50px auto", padding: 20, border: "1px solid #ccc", borderRadius: 8 }}>
-      <h2>Password Strength Checker</h2>
+    <div className="password-checker-container">
+      <div className="password-checker-card">
+        <h2> Password Strength Checker</h2>
 
-      <input
-        type="password"
-        value={password}
-        onChange={handleChange}
-        onKeyPress={handleKeyPress}
-        placeholder="Enter your password and press Enter..."
-        style={{
-          width: "100%",
-          padding: "10px",
-          marginTop: "10px",
-          marginBottom: "15px",
-          border: "1px solid #ccc",
-          borderRadius: "5px"
-        }}
-      />
+        <input
+          type="password"
+          value={password}
+          onChange={handleChange}
+          onKeyDown={handleKeyPress}
+          placeholder="Enter your password and press Enter..."
+          className="password-input"
+        />
 
-      <button
-        onClick={checkStrength}
-        style={{
-          width: "100%",
-          padding: "10px",
-          backgroundColor: "#007BFF",
-          color: "white",
-          border: "none",
-          borderRadius: "5px",
-          cursor: "pointer",
-          marginBottom: "15px"
-        }}
-      >
-        Check Strength
-      </button>
+        <button onClick={checkStrength} className="password-button">
+          Check Strength
+        </button>
 
-      {hasChecked && (
-        <>
-          {/* Strength bar */}
-          <div
-            style={{
-              width: "100%",
-              height: "8px",
-              backgroundColor: "#eee",
-              borderRadius: "5px",
-              overflow: "hidden",
-              marginBottom: "10px"
-            }}
-          >
-            <div
+        {hasChecked && (
+          <>
+            <div className="strength-bar-bg">
+              <div
+                className="strength-bar-fill"
+                style={{ width: `${score}%` }}
+              ></div>
+            </div>
+
+            <p
               style={{
-                height: "8px",
-                width: `${score}%`,
-                backgroundColor: label.color,
-                transition: "width 0.4s"
+                fontWeight: "bold",
+                color: label.color,
+                fontSize: "18px",
               }}
-            ></div>
-          </div>
+            >
+              Strength: {label.text} ({score}/100)
+            </p>
 
-          {/* Strength label + numeric score */}
-          <p style={{ fontWeight: "bold", color: label.color }}>
-            Strength: {label.text} ({score}/100)
-          </p>
+            {feedback && <p className="feedback-box">{feedback}</p>}
+          </>
+        )}
 
-          {/* Feedback */}
-          {feedback && (
-            <p style={{ fontSize: "14px", marginTop: "8px" }}>{feedback}</p>
-          )}
-        </>
-      )}
+        <p className="hint">
+          Press <strong>Enter</strong> or click <strong>Check Strength</strong> to evaluate.
+        </p>
+      </div>
     </div>
   );
 }
