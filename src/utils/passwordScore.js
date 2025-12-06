@@ -20,13 +20,13 @@ export function calculateXP(password = "") {
 
   // Base points
   let xp = 0;
-  xp += countLower * 2;
-  xp += countUpper * 5;
-  xp += countDigits * 8;
-  xp += countSymbols * 10;
+  xp += countLower * 4;
+  xp += countUpper * 6;
+  xp += countDigits * 10;
+  xp += countSymbols * 15;
 
   // length bonus (always)
-  xp += length * 2;
+  xp += length * 5;
 
   // length bonus
   if (length > 12) xp += 20;
