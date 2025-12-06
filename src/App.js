@@ -1,75 +1,88 @@
-import React, { useState, useEffect } from "react";
-import "./App.css";
-import { submitScore } from "./api/leaderboard";
-import PlayerNameInput from "./components/PlayerNameInput";
-import PasswordInput from "./components/PasswordInput";
-import StrengthIndicator from "./components/StrengthIndicator";
-import XPDisplay from "./components/XPDisplay";
-import XPFloatPopup from "./components/XPFloatPopup";
-import Leaderboard from "./components/Leaderboard";
-
-
-import { calculateXP, calculateLevel } from "./utils/passwordScore";
+import React, { useEffect, useState } from "react";
+import Grid from "./components/Grid";
+import Keyboard from "./components/Keyboard";
+import ResultPopup from "./components/ResultPopup";
+import { fetchDailyChallenge, analyzePassword } from "./utils/fetchChallenge";
+import { evaluateGuess } from "./utils/evaluateGuess";
+import "./styles/challenge.css";
 
 function App() {
-  const [password, setPassword] = useState("");
-  const [xp, setXp] = useState(0);
-  const [level, setLevel] = useState(1);
-  const [previousXP, setPreviousXP] = useState(0);
-  const [xpGain, setXpGain] = useState(0);
+  const [challenge, setChallenge] = useState(null);
+  const [guesses, setGuesses] = useState([]);
+  const [results, setResults] = useState([]);
+  const [currentGuess, setCurrentGuess] = useState("");
+  const [popup, setPopup] = useState({ visible: false });
 
+  const MAX_LENGTH = 14;     // Voidaan vaihtaa 5, 6, 8, 10
+  const MAX_TRIES = 6;
 
-  // 🔥 Tarvitaan level-muutoksen seurantaan
-  const [previousLevel, setPreviousLevel] = useState(1);
+  useEffect(() => {
+    fetchDailyChallenge().then(setChallenge);
+  }, []);
 
-  // 🔥 TEMP – korvaa myöhemmin oikealla nimellä (nimikenttä-komponentti)
-  const [playerName, setPlayerName] = useState("Guest");
+  if (!challenge) return <div>Ladataan päivän haastetta...</div>;
 
-
-  function handlePasswordChange(value) {
-    setPassword(value);
-
-    const newXp = calculateXP(value);
-    const newLevel = calculateLevel(newXp);
-
-    // XP gain
-    const delta = newXp - previousXP;
-    if (delta > 0) setXpGain(delta);
-    setPreviousXP(newXp);
-
-    setXp(newXp);
-    setLevel(newLevel);
+  function handleKey(char) {
+    if (currentGuess.length < MAX_LENGTH) {
+      setCurrentGuess(currentGuess + char.toLowerCase());
+    }
   }
 
-  // 🔥 Kun level muuttuu → lähetetään score backendille
-  useEffect(() => {
-    if (level > previousLevel) {
-      submitScore(playerName, level);
-    }
-    setPreviousLevel(level);
-  }, [level, previousLevel, playerName]);
+  function handleDelete() {
+    setCurrentGuess(currentGuess.slice(0, -1));
+  }
 
-  const strengthLabel =
-    password.length === 0
-      ? "---"
-      : xp < 60
-      ? "Weak"
-      : xp < 180
-      ? "Medium"
-      : "Strong";
+  async function handleEnter() {
+    if (currentGuess.length === 0) return;
+
+    const challengeWord = challenge.word.toLowerCase().slice(0, MAX_LENGTH);
+
+    // Analysoidaan salasanan sisältö
+    const scoreData = await analyzePassword(currentGuess);
+
+    // Arvausväritys Wordlen tapaan
+    const evaluation = evaluateGuess(currentGuess, challengeWord);
+
+    setGuesses([...guesses, currentGuess]);
+    setResults([...results, evaluation]);
+
+    // Tarkista voitto
+    if (currentGuess === challengeWord) {
+      setPopup({
+        visible: true,
+        success: true,
+        correctWord: challengeWord,
+        score: scoreData.score
+      });
+    } else if (guesses.length + 1 === MAX_TRIES) {
+      setPopup({
+        visible: true,
+        success: false,
+        correctWord: challengeWord,
+        score: scoreData.score
+      });
+    }
+
+    setCurrentGuess("");
+  }
 
   return (
-    <div className="container">
-      <h1>Password Strength Game</h1>
+    <div className="challenge-container">
+      <h1>Daily Password Challenge </h1>
 
-      <PlayerNameInput onNameChange={setPlayerName} />
-      <PasswordInput password={password} onPasswordChange={handlePasswordChange} />
+      <Grid
+        guesses={[...guesses, currentGuess]}
+        results={results}
+        wordLength={MAX_LENGTH}
+      />
 
-      <StrengthIndicator strength={strengthLabel} />
-      <XPFloatPopup amount={xpGain} />
-      <XPDisplay xp={xp} level={level} />
-      <Leaderboard />
+      <Keyboard
+        onKey={handleKey}
+        onEnter={handleEnter}
+        onDelete={handleDelete}
+      />
 
+      <ResultPopup {...popup} />
     </div>
   );
 }
