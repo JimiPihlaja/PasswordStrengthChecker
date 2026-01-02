@@ -1,40 +1,77 @@
-.hints-panel {
-  margin-top: 20px;
-  padding: 16px;
-  background: #1c1c1c;
+.hints {
+  border: 1px solid #ddd;
   border-radius: 12px;
-  color: #fff;
-  box-shadow: 0 0 12px rgba(0,0,0,0.3);
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.06);
 }
 
-.hints-panel.empty {
-  opacity: 0.5;
-  font-style: italic;
+.hints-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #f7f7f7;
+  border: 0;
+  cursor: pointer;
+}
+
+.hints-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hints-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .hints-title {
-  font-size: 1.2rem;
-  margin-bottom: 12px;
-  font-weight: bold;
-  color: #7ad7ff;
+  font-size: 14px;
+  font-weight: 700;
 }
 
-.hint-item {
-  background: #2a2a2a;
-  padding: 10px;
-  margin-bottom: 8px;
-  border-radius: 8px;
-  border-left: 4px solid #7ad7ff;
-  animation: fadeIn 0.3s ease;
+.hints-chevron {
+  font-size: 16px;
+  opacity: 0.7;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.hints-body {
+  padding: 12px 14px 14px;
 }
+
+.hints-empty {
+  font-size: 14px;
+  opacity: 0.8;
+  padding: 8px 0;
+}
+
+.hints-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.hints-item {
+  padding: 10px 10px;
+  border-radius: 10px;
+  background: #fafafa;
+  border: 1px solid #eee;
+  font-size: 14px;
+  line-height: 1.3;
+}
+

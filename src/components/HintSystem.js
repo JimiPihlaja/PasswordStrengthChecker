@@ -1,24 +1,49 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import "./HintSystem.css";
 
 export default function HintSystem({ hints = [] }) {
-  if (!hints.length) {
-    return (
-      <div className="hints-panel empty">
-        <p>Ei vihjeitä vielä. Tee arvaus!</p>
-      </div>
-    );
-  }
+  const [open, setOpen] = useState(true);
+
+  const normalized = useMemo(() => {
+    // Poista tyhjät + dedup
+    const clean = (hints || []).filter(Boolean).map(String);
+    return Array.from(new Set(clean));
+  }, [hints]);
+
+  const hasHints = normalized.length > 0;
 
   return (
-    <div className="hints-panel">
-      <h3 className="hints-title">Clues</h3>
-
-      {hints.map((hint, index) => (
-        <div key={index} className="hint-item">
-          {hint}
+    <aside className="hints" aria-label="Hints panel">
+      <button
+        className="hints-header"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        type="button"
+      >
+        <div className="hints-header-left">
+          <span className="hints-badge">{hasHints ? normalized.length : 0}</span>
+          <span className="hints-title">Vihjeet</span>
         </div>
-      ))}
-    </div>
+        <span className="hints-chevron">{open ? "▾" : "▸"}</span>
+      </button>
+
+      {open && (
+        <div className="hints-body">
+          {!hasHints ? (
+            <div className="hints-empty">
+              Ei vihjeitä vielä. Tee arvaus!
+            </div>
+          ) : (
+            <ul className="hints-list">
+              {normalized.map((hint, i) => (
+                <li key={`${hint}-${i}`} className="hints-item">
+                  {hint}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </aside>
   );
 }

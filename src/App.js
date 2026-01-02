@@ -128,22 +128,29 @@ function App() {
   // ----------- UI -----------
 
   return (
-    <div className="challenge-container">
-      <h1>Daily Password Challenge</h1>
+  <div className="challenge-container">
+    <h1>Daily Password Challenge</h1>
 
-      <Grid
-        guesses={[...guesses, currentGuess]}
-        results={results}
-        wordLength={MAX_LENGTH}
-      />
+    <Grid
+      guesses={[...guesses, currentGuess]}
+      results={results}
+      wordLength={MAX_LENGTH}
+    />
 
-      <Keyboard onKey={handleKey} onEnter={handleEnter} onDelete={handleDelete} />
+    {/* ✅ Vihjeet gridin ja näppäimistön väliin */}
+    <HintSystem hints={hints} />
 
-      <HintSystem hints={hints} />
+    <Keyboard
+      onKey={handleKey}
+      onEnter={handleEnter}
+      onDelete={handleDelete}
+      disabled={popup.visible || guesses.length >= MAX_TRIES}
+    />
 
-      <ResultPopup {...popup} />
-    </div>
-  );
+    <ResultPopup {...popup} />
+  </div>
+);
+
 }
 
 export default App;
