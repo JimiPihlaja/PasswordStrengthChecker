@@ -5,7 +5,6 @@ export default function ResultPopup({ visible, success, correctWord, score }) {
     <div className="popup">
       <h2>{success ? "You cracked it! " : "Failed"}</h2>
       <p>Correct word was: <b>{correctWord}</b></p>
-      <p>Your score: {score}</p>
     </div>
   );
 }
