@@ -33,9 +33,13 @@ export async function analyzePassword(password) {
     throw new Error(data?.error || "Failed to analyze password.");
   }
 
-  // Normalize: backend returns { score, messages }
   return {
     score: typeof data?.score === "number" ? data.score : 0,
+    strengthLabel: data?.strengthLabel || "Unknown",
+    crackTimeText: data?.crackTimeText || "—",
+    entropyBits: typeof data?.entropyBits === "number" ? data.entropyBits : null,
     messages: Array.isArray(data?.messages) ? data.messages : [],
+    tips: Array.isArray(data?.tips) ? data.tips : [],
   };
 }
+

@@ -76,4 +76,22 @@ button.big {
   gap: 12px;
 }
 
+button.key {
+  background: #ddd;
+}
+
+button.key.correct {
+  background: #4caf50;
+  color: white;
+}
+
+button.key.present {
+  background: #ffc107;
+  color: black;
+}
+
+button.key.wrong {
+  background: #9e9e9e;
+  color: white;
+}
 

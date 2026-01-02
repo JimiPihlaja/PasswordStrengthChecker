@@ -1,40 +1,63 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import Grid from "./components/Grid";
 import Keyboard from "./components/Keyboard";
 import ResultPopup from "./components/ResultPopup";
-import HintSystem from "./components/HintSystem";
+import PasswordStrengthPanel from "./components/PasswordStrengthPanel";
 import { fetchDailyChallenge, analyzePassword } from "./utils/fetchChallenge";
 import { evaluateGuess } from "./utils/evaluateGuess";
 import "./styles/challenge.css";
 
-function App() {
+function buildKeyStatuses(guesses, results) {
+  const priority = { wrong: 1, present: 2, correct: 3 };
+  const statusMap = {};
+
+  for (let gi = 0; gi < guesses.length; gi++) {
+    const guess = guesses[gi] || "";
+    const res = results[gi] || [];
+
+    for (let i = 0; i < guess.length; i++) {
+      const ch = (guess[i] || "").toLowerCase();
+      const st = res[i];
+      if (!ch || !st) continue;
+
+      const prev = statusMap[ch];
+      if (!prev || priority[st] > priority[prev]) statusMap[ch] = st;
+    }
+  }
+  return statusMap;
+}
+
+export default function App() {
   const [challenge, setChallenge] = useState(null);
   const [guesses, setGuesses] = useState([]);
   const [results, setResults] = useState([]);
   const [currentGuess, setCurrentGuess] = useState("");
   const [popup, setPopup] = useState({ visible: false });
-  const [hints, setHints] = useState([]);
+
+  // Analysis for the DAILY correct password shown after game ends
+  const [dailyAnalysis, setDailyAnalysis] = useState(null);
 
   const MAX_LENGTH = 14;
   const MAX_TRIES = 6;
 
-  // Fetch daily challenge
   useEffect(() => {
     fetchDailyChallenge().then(setChallenge).catch(() => setChallenge(null));
   }, []);
 
   const gameOver = popup.visible || guesses.length >= MAX_TRIES;
 
-  // ----------- HANDLERS -----------
+  const keyStatuses = useMemo(
+    () => buildKeyStatuses(guesses, results),
+    [guesses, results]
+  );
 
   const handleKey = useCallback(
     (char) => {
       if (!challenge) return;
       if (gameOver) return;
 
-      setCurrentGuess((prev) =>
-        prev.length < MAX_LENGTH ? prev + char.toLowerCase() : prev
-      );
+      const c = String(char).toLowerCase();
+      setCurrentGuess((prev) => (prev.length < MAX_LENGTH ? prev + c : prev));
     },
     [MAX_LENGTH, challenge, gameOver]
   );
@@ -42,115 +65,94 @@ function App() {
   const handleDelete = useCallback(() => {
     if (!challenge) return;
     if (gameOver) return;
-
     setCurrentGuess((prev) => prev.slice(0, -1));
   }, [challenge, gameOver]);
+
+  const endGameAndAnalyzeDaily = useCallback(async (success, correctWord) => {
+    setPopup({ visible: true, success, correctWord });
+
+    try {
+      const analysis = await analyzePassword(correctWord);
+      setDailyAnalysis(analysis);
+    } catch {
+      setDailyAnalysis({
+        score: 0,
+        messages: ["Could not analyze daily password (server error)."],
+      });
+    }
+  }, []);
 
   const handleEnter = useCallback(async () => {
     if (!challenge) return;
     if (gameOver) return;
-
-    // Require exact length like Wordle
     if (currentGuess.length !== MAX_LENGTH) return;
 
     const challengeWord = challenge.word.toLowerCase().slice(0, MAX_LENGTH);
-
-    // Analyze password -> backend returns { score, messages }
-    let scoreData = { score: 0, messages: [] };
-    try {
-      scoreData = await analyzePassword(currentGuess);
-    } catch (e) {
-      scoreData = { score: 0, messages: ["Could not analyze password (server error)."] };
-    }
-
-    // Show hints/messages from analyzer
-    setHints(scoreData.messages || []);
-
-    // Wordle-style evaluation
     const evaluation = evaluateGuess(currentGuess, challengeWord);
 
-    // Push guess + result
     setGuesses((prev) => [...prev, currentGuess]);
     setResults((prev) => [...prev, evaluation]);
 
-    // Win / Lose popup
     if (currentGuess === challengeWord) {
-      setPopup({
-        visible: true,
-        success: true,
-        correctWord: challengeWord,
-        score: scoreData.score,
-      });
+      await endGameAndAnalyzeDaily(true, challengeWord);
     } else if (guesses.length + 1 === MAX_TRIES) {
-      setPopup({
-        visible: true,
-        success: false,
-        correctWord: challengeWord,
-        score: scoreData.score,
-      });
+      await endGameAndAnalyzeDaily(false, challengeWord);
     }
 
     setCurrentGuess("");
-  }, [challenge, currentGuess, MAX_LENGTH, MAX_TRIES, guesses.length, gameOver]);
-
-  // ----------- USER KEYBOARD (keydown) -----------
+  }, [
+    challenge,
+    currentGuess,
+    MAX_LENGTH,
+    MAX_TRIES,
+    guesses.length,
+    gameOver,
+    endGameAndAnalyzeDaily,
+  ]);
 
   useEffect(() => {
     function handleKeyPress(e) {
       const key = e.key;
 
-      if (key === "Enter") {
-        handleEnter();
-        return;
-      }
+      if (key === "Enter") return void handleEnter();
+      if (key === "Backspace") return void handleDelete();
 
-      if (key === "Backspace") {
-        handleDelete();
-        return;
-      }
-
-      // Allowed characters for password guessing
       const allowed = /^[a-zA-Z0-9!@#$%^&*()_\-=+[{\]}|;:'",.<>/?`~]$/;
-
-      if (allowed.test(key)) {
-        handleKey(key);
-      }
+      if (allowed.test(key)) handleKey(key.toLowerCase());
     }
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [handleEnter, handleDelete, handleKey]);
 
-  // ----------- LOADING / ERROR -----------
-
   if (!challenge) return <div>Ladataan päivän haastetta...</div>;
 
-  // ----------- UI -----------
-
   return (
-  <div className="challenge-container">
-    <h1>Daily Password Challenge</h1>
+    <div className="challenge-container">
+      <h1>Daily Password Challenge</h1>
 
-    <Grid
-      guesses={[...guesses, currentGuess]}
-      results={results}
-      wordLength={MAX_LENGTH}
-    />
+      <Grid
+        guesses={[...guesses, currentGuess]}
+        results={results}
+        wordLength={MAX_LENGTH}
+      />
 
-    {/* ✅ Vihjeet gridin ja näppäimistön väliin */}
-    <HintSystem hints={hints} />
+      <Keyboard
+        onKey={handleKey}
+        onEnter={handleEnter}
+        onDelete={handleDelete}
+        disabled={gameOver}
+        keyStatuses={keyStatuses}
+      />
 
-    <Keyboard
-      onKey={handleKey}
-      onEnter={handleEnter}
-      onDelete={handleDelete}
-      disabled={popup.visible || guesses.length >= MAX_TRIES}
-    />
+      <ResultPopup {...popup} />
 
-    <ResultPopup {...popup} />
-  </div>
-);
-
+      {popup.visible && (
+        <PasswordStrengthPanel
+          dailyPassword={popup.correctWord}
+          dailyAnalysis={dailyAnalysis}
+        />
+      )}
+    </div>
+  );
 }
-
-export default App;
