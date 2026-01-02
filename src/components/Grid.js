@@ -1,11 +1,9 @@
 import Row from "./Row";
 
-export default function Grid({ guesses, results, wordLength }) {
-  const rows = 6;
-
+export default function Grid({ guesses = [], results = [], wordLength = 14, rows = 6 }) {
   return (
     <div className="grid">
-      {Array(rows).fill(0).map((_, i) => (
+      {Array.from({ length: rows }).map((_, i) => (
         <Row
           key={i}
           guess={guesses[i] || ""}

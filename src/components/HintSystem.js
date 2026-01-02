@@ -12,7 +12,7 @@ export default function HintSystem({ hints = [] }) {
 
   return (
     <div className="hints-panel">
-      <h3 className="hints-title">Vihjeet</h3>
+      <h3 className="hints-title">Clues</h3>
 
       {hints.map((hint, index) => (
         <div key={index} className="hint-item">

@@ -2,10 +2,10 @@ import React, { useEffect, useState, useCallback } from "react";
 import Grid from "./components/Grid";
 import Keyboard from "./components/Keyboard";
 import ResultPopup from "./components/ResultPopup";
+import HintSystem from "./components/HintSystem";
 import { fetchDailyChallenge, analyzePassword } from "./utils/fetchChallenge";
 import { evaluateGuess } from "./utils/evaluateGuess";
 import "./styles/challenge.css";
-import HintSystem from "./components/HintSystem";
 
 function App() {
   const [challenge, setChallenge] = useState(null);
@@ -13,49 +13,67 @@ function App() {
   const [results, setResults] = useState([]);
   const [currentGuess, setCurrentGuess] = useState("");
   const [popup, setPopup] = useState({ visible: false });
-  const [hints, setHints] = useState([]); // <-- Vihjeet talteen
+  const [hints, setHints] = useState([]);
 
   const MAX_LENGTH = 14;
   const MAX_TRIES = 6;
 
-  // Haetaan päivän haaste
+  // Fetch daily challenge
   useEffect(() => {
-    fetchDailyChallenge().then(setChallenge);
+    fetchDailyChallenge().then(setChallenge).catch(() => setChallenge(null));
   }, []);
+
+  const gameOver = popup.visible || guesses.length >= MAX_TRIES;
 
   // ----------- HANDLERS -----------
 
   const handleKey = useCallback(
     (char) => {
+      if (!challenge) return;
+      if (gameOver) return;
+
       setCurrentGuess((prev) =>
         prev.length < MAX_LENGTH ? prev + char.toLowerCase() : prev
       );
     },
-    [MAX_LENGTH]
+    [MAX_LENGTH, challenge, gameOver]
   );
 
   const handleDelete = useCallback(() => {
+    if (!challenge) return;
+    if (gameOver) return;
+
     setCurrentGuess((prev) => prev.slice(0, -1));
-  }, []);
+  }, [challenge, gameOver]);
 
   const handleEnter = useCallback(async () => {
-    if (!currentGuess || !challenge) return;
+    if (!challenge) return;
+    if (gameOver) return;
+
+    // Require exact length like Wordle
+    if (currentGuess.length !== MAX_LENGTH) return;
 
     const challengeWord = challenge.word.toLowerCase().slice(0, MAX_LENGTH);
 
-    // Analysoidaan salasanan sisältö
-    const scoreData = await analyzePassword(currentGuess);
+    // Analyze password -> backend returns { score, messages }
+    let scoreData = { score: 0, messages: [] };
+    try {
+      scoreData = await analyzePassword(currentGuess);
+    } catch (e) {
+      scoreData = { score: 0, messages: ["Could not analyze password (server error)."] };
+    }
 
-    // TALLENNA VIHJEET
-    setHints(scoreData.hints || []);
+    // Show hints/messages from analyzer
+    setHints(scoreData.messages || []);
 
-    // Wordle-väritys
+    // Wordle-style evaluation
     const evaluation = evaluateGuess(currentGuess, challengeWord);
 
+    // Push guess + result
     setGuesses((prev) => [...prev, currentGuess]);
     setResults((prev) => [...prev, evaluation]);
 
-    // Voitto
+    // Win / Lose popup
     if (currentGuess === challengeWord) {
       setPopup({
         visible: true,
@@ -63,9 +81,7 @@ function App() {
         correctWord: challengeWord,
         score: scoreData.score,
       });
-    }
-    // Häviö
-    else if (guesses.length + 1 === MAX_TRIES) {
+    } else if (guesses.length + 1 === MAX_TRIES) {
       setPopup({
         visible: true,
         success: false,
@@ -75,9 +91,9 @@ function App() {
     }
 
     setCurrentGuess("");
-  }, [challenge, currentGuess, guesses.length, MAX_LENGTH, MAX_TRIES]);
+  }, [challenge, currentGuess, MAX_LENGTH, MAX_TRIES, guesses.length, gameOver]);
 
-  // ----------- KÄYTTÄJÄN NÄPPÄIMISTÖ (KEYDOWN) -----------
+  // ----------- USER KEYBOARD (keydown) -----------
 
   useEffect(() => {
     function handleKeyPress(e) {
@@ -93,6 +109,7 @@ function App() {
         return;
       }
 
+      // Allowed characters for password guessing
       const allowed = /^[a-zA-Z0-9!@#$%^&*()_\-=+[{\]}|;:'",.<>/?`~]$/;
 
       if (allowed.test(key)) {
@@ -104,7 +121,7 @@ function App() {
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [handleEnter, handleDelete, handleKey]);
 
-  // ----------- LATAUS -----------
+  // ----------- LOADING / ERROR -----------
 
   if (!challenge) return <div>Ladataan päivän haastetta...</div>;
 
@@ -122,7 +139,6 @@ function App() {
 
       <Keyboard onKey={handleKey} onEnter={handleEnter} onDelete={handleDelete} />
 
-      {/* VIHJEET TÄSSÄ */}
       <HintSystem hints={hints} />
 
       <ResultPopup {...popup} />
