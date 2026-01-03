@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { analyzePassword } from "../utils/fetchChallenge";
 import "./PasswordStrengthPanel.css";
+import PasswordChecklist from "./PasswordChecklist";
 
 function pillClass(label) {
   return `psc-${String(label || "very weak")
@@ -9,10 +10,12 @@ function pillClass(label) {
 }
 
 const DEFAULT_TIPS = [
-  "Use 12–16+ characters. Length matters more than complexity.",
-  "Avoid common words, names, and keyboard patterns (qwerty, 123456).",
-  "Avoid reusing passwords — use a password manager if possible.",
-  "Enable two-factor authentication (2FA) for important accounts.",
+  "Use long passwords or passphrases (14+ characters recommended). Length is more important than complexity. (ENISA, NIST 800-63B)",
+  "Prefer passphrases made of multiple words that are easy to remember but hard to guess. (ENISA)",
+  "Avoid common passwords, leaked passwords, names, and predictable patterns. (NIST 800-63B)",
+  "Do not reuse passwords across different services. Use a password manager to generate and store unique passwords. (ENISA, NIST)",
+  "Do not change passwords regularly unless there is a breach or suspicion of compromise. (NIST 800-63B)",
+  "Enable multi-factor authentication (MFA/2FA) whenever possible. (ENISA, NIST)",
 ];
 
 export default function PasswordStrengthPanel({ dailyPassword, dailyAnalysis }) {
@@ -138,8 +141,7 @@ export default function PasswordStrengthPanel({ dailyPassword, dailyAnalysis }) 
               <div className="psc-label">Estimated time to crack</div>
               <div className="psc-value">{a.crackTimeText}</div>
             </div>
-           
-           
+
             {a.messages.length > 0 && (
               <div className="psc-section">
                 <div className="psc-section-title">What to improve</div>
@@ -152,7 +154,9 @@ export default function PasswordStrengthPanel({ dailyPassword, dailyAnalysis }) 
             )}
 
             <div className="psc-section">
-              <div className="psc-section-title">Password tips</div>
+              <div className="psc-section-title">
+                Password tips (based on ENISA and NIST SP 800-63B)
+              </div>
               <ul className="psc-list">
                 {a.tips.map((t, i) => (
                   <li key={i}>{t}</li>
@@ -169,49 +173,66 @@ export default function PasswordStrengthPanel({ dailyPassword, dailyAnalysis }) 
 
   return (
     <div className="psc">
-      <h1 className="psc-title">Password Strength Checker</h1>
-      <p className="psc-subtitle">
-        Peli päättyi — nyt katsotaan kuinka vahva päivän salasana oikeasti on,
-        ja voit testata omiasi.
-      </p>
+      <div className="psc-hero">
+        <div>
+          <h1 className="psc-title">Password Strength Checker</h1>
+          <p className="psc-subtitle">
+            The game is over! Now let's see how strong today's password is, and
+            you can test yours.
+          </p>
+        </div>
+      </div>
 
-      {renderAnalysisCard(
-        "Daily password analysis",
-        dailyPassword,
-        normalize.daily,
-        loadingDaily
-      )}
-
-      <div className="psc-card">
-        <div className="psc-card-header">
-          <h2>Test your own password</h2>
+      <div className="psc-grid">
+        <div className="psc-col">
+          {renderAnalysisCard(
+            "Daily password analysis",
+            dailyPassword,
+            normalize.daily,
+            loadingDaily
+          )}
         </div>
 
-        <div className="psc-input-row">
-          <input
-            className="psc-input"
-            placeholder="Type a password to analyze..."
-            value={myPw}
-            onChange={(e) => setMyPw(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleAnalyzeMine();
-            }}
-          />
-          <button
-            className="psc-btn"
-            onClick={handleAnalyzeMine}
-            disabled={loadingMine}
-          >
-            {loadingMine ? "Analyzing..." : "Analyze"}
-          </button>
+        <div className="psc-col">
+          <div className="psc-card">
+            <div className="psc-card-header">
+              <h2>Test your own password</h2>
+            </div>
+
+            <div className="psc-input-row">
+              <input
+                className="psc-input"
+                placeholder="Type a password to analyze..."
+                value={myPw}
+                onChange={(e) => setMyPw(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAnalyzeMine();
+                }}
+              />
+              <button
+                className="psc-btn"
+                onClick={handleAnalyzeMine}
+                disabled={loadingMine}
+              >
+                {loadingMine ? "Analyzing..." : "Analyze"}
+              </button>
+            </div>
+
+            <PasswordChecklist password={myPw} />
+
+            {errorMine && <div className="psc-error">{errorMine}</div>}
+
+            {normalize.mine && <div className="psc-divider" />}
+
+            {normalize.mine &&
+              renderAnalysisCard(
+                "Your password result",
+                myPw,
+                normalize.mine,
+                false
+              )}
+          </div>
         </div>
-
-        {errorMine && <div className="psc-error">{errorMine}</div>}
-
-        {normalize.mine && <div className="psc-divider" />}
-
-        {normalize.mine &&
-          renderAnalysisCard("Your password result", myPw, normalize.mine, false)}
       </div>
     </div>
   );
