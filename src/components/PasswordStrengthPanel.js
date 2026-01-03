@@ -122,7 +122,7 @@ export default function PasswordStrengthPanel({ dailyPassword, dailyAnalysis }) 
         </div>
 
         {loading ? (
-          <div className="psc-loading">Analysoidaan...</div>
+          <div className="psc-loading">Analyzing...</div>
         ) : a ? (
           <>
             <div className="psc-row">
@@ -135,10 +135,11 @@ export default function PasswordStrengthPanel({ dailyPassword, dailyAnalysis }) 
             </div>
 
             <div className="psc-row">
-              <div className="psc-label">Estimated crack time</div>
+              <div className="psc-label">Estimated time to crack</div>
               <div className="psc-value">{a.crackTimeText}</div>
             </div>
-
+           
+           
             {a.messages.length > 0 && (
               <div className="psc-section">
                 <div className="psc-section-title">What to improve</div>
