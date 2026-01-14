@@ -24,6 +24,7 @@ function buildKeyStatuses(guesses, results) {
       if (!prev || priority[st] > priority[prev]) statusMap[ch] = st;
     }
   }
+
   return statusMap;
 }
 
@@ -41,7 +42,9 @@ export default function App() {
   const MAX_TRIES = 6;
 
   useEffect(() => {
-    fetchDailyChallenge().then(setChallenge).catch(() => setChallenge(null));
+    fetchDailyChallenge()
+      .then(setChallenge)
+      .catch(() => setChallenge(null));
   }, []);
 
   const gameOver = popup.visible || guesses.length >= MAX_TRIES;
@@ -68,16 +71,17 @@ export default function App() {
     setCurrentGuess((prev) => prev.slice(0, -1));
   }, [challenge, gameOver]);
 
-  const endGameAndAnalyzeDaily = useCallback(async (success, correctWord) => {
-    setPopup({ visible: true, success, correctWord });
+  const endGameAndAnalyzeDaily = useCallback(async (success, correctWordOriginal) => {
+    setPopup({ visible: true, success, correctWord: correctWordOriginal });
 
     try {
-      const analysis = await analyzePassword(correctWord);
+      const analysis = await analyzePassword(correctWordOriginal);
       setDailyAnalysis(analysis);
     } catch {
       setDailyAnalysis({
-        score: 0,
         messages: ["Could not analyze daily password (server error)."],
+        crackTimeText: "Not available",
+        tips: [],
       });
     }
   }, []);
@@ -85,18 +89,25 @@ export default function App() {
   const handleEnter = useCallback(async () => {
     if (!challenge) return;
     if (gameOver) return;
+
+  
     if (currentGuess.length !== MAX_LENGTH) return;
 
-    const challengeWord = challenge.word.toLowerCase().slice(0, MAX_LENGTH);
+    const originalWord = String(challenge.word).slice(0, MAX_LENGTH);
+
+    const challengeWord = originalWord.toLowerCase();
+
+    // Evaluate guess
     const evaluation = evaluateGuess(currentGuess, challengeWord);
 
     setGuesses((prev) => [...prev, currentGuess]);
     setResults((prev) => [...prev, evaluation]);
 
+    // Win / Lose
     if (currentGuess === challengeWord) {
-      await endGameAndAnalyzeDaily(true, challengeWord);
+      await endGameAndAnalyzeDaily(true, originalWord);
     } else if (guesses.length + 1 === MAX_TRIES) {
-      await endGameAndAnalyzeDaily(false, challengeWord);
+      await endGameAndAnalyzeDaily(false, originalWord);
     }
 
     setCurrentGuess("");
@@ -149,8 +160,8 @@ export default function App() {
 
       {popup.visible && (
         <PasswordStrengthPanel
-          dailyPassword={popup.correctWord}
-          dailyAnalysis={dailyAnalysis}
+          dailyPassword={popup.correctWord}   
+          dailyAnalysis={dailyAnalysis}       
         />
       )}
     </div>
