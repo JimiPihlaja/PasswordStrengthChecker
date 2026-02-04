@@ -126,7 +126,7 @@ export default function PasswordStrengthPanel({ dailyPassword, dailyAnalysis }) 
 
         <div className="psc-section">
           <div className="psc-section-title">
-            Password tips (based on ENISA and NIST SP 800-63B)
+            Password tips 
           </div>
           <ul className="psc-list">
             {analysis.tips.map((t, i) => (
